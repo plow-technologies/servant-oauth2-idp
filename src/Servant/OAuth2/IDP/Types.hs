@@ -574,7 +574,8 @@ serializeScopeSet scopes
 Wraps a Set of Scope values for use in Servant query parameters.
 -}
 newtype Scopes = Scopes {unScopes :: Set Scope}
-    deriving stock (Eq, Ord, Show, Generic)
+    deriving newtype (Eq, Ord, Arbitrary)
+    deriving stock (Show, Generic)
 
 instance FromHttpApiData Scopes where
     parseUrlPiece t = case parseScopes t of
