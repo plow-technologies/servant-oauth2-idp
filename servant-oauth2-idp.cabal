@@ -39,22 +39,23 @@ library
     exposed-modules:
         Servant.OAuth2.IDP.API
         Servant.OAuth2.IDP.Config
-        Servant.OAuth2.IDP.Types
-        Servant.OAuth2.IDP.Metadata
-        Servant.OAuth2.IDP.PKCE
-        Servant.OAuth2.IDP.Store
-        Servant.OAuth2.IDP.Store.InMemory
         Servant.OAuth2.IDP.Errors
-        Servant.OAuth2.IDP.Trace
-        Servant.OAuth2.IDP.Server
         Servant.OAuth2.IDP.Handlers
+        Servant.OAuth2.IDP.Handlers.Authorization
         Servant.OAuth2.IDP.Handlers.HTML
+        Servant.OAuth2.IDP.Handlers.Login
         Servant.OAuth2.IDP.Handlers.Metadata
         Servant.OAuth2.IDP.Handlers.Registration
-        Servant.OAuth2.IDP.Handlers.Authorization
-        Servant.OAuth2.IDP.Handlers.Login
         Servant.OAuth2.IDP.Handlers.Token
+        Servant.OAuth2.IDP.JWKS
+        Servant.OAuth2.IDP.Metadata
+        Servant.OAuth2.IDP.PKCE
+        Servant.OAuth2.IDP.Server
+        Servant.OAuth2.IDP.Store
+        Servant.OAuth2.IDP.Store.InMemory
         Servant.OAuth2.IDP.Test.Internal
+        Servant.OAuth2.IDP.Trace
+        Servant.OAuth2.IDP.Types
         Servant.OAuth2.IDP.Auth.Backend
         Servant.OAuth2.IDP.Auth.Demo
 
@@ -85,7 +86,8 @@ library
         servant-lucid >= 0.9 && < 0.10,
         hspec >= 2.10 && < 2.12,
         hspec-wai >= 0.11 && < 0.12,
-        QuickCheck >= 2.14 && < 2.16
+        QuickCheck >= 2.14 && < 2.16,
+        jose >= 0.10 && < 0.12
 
     hs-source-dirs:   src
     default-language: GHC2021
