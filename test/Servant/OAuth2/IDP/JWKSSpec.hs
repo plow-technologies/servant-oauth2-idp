@@ -19,6 +19,7 @@ import Crypto.JWT (genJWK)
 import Data.Aeson (Value (..), toJSON)
 import Data.Aeson.KeyMap qualified as KM
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
+import Data.Text (unpack)
 import Servant.OAuth2.IDP.JWKS (JWKSet (..), RFC7517JWK (..))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -111,7 +112,7 @@ spec = describe "RFC7517JWK ToJSON" $ do
                     || isDigit c
                     || c == '-'
                     || c == '_'
-            all isBase64UrlChar (show kidStr) `shouldBe` True
+            all isBase64UrlChar (unpack kidStr) `shouldBe` True
           Nothing -> expectationFailure "Expected kid to be present"
           _ -> expectationFailure "Expected kid to be a String"
       _ -> expectationFailure "Expected Object from ToJSON RFC7517JWK"

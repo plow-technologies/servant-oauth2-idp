@@ -25,10 +25,17 @@ module Servant.OAuth2.IDP.JWKS
     RFC7517JWK (..),
   ) where
 
+import Control.Lens ((^.))
+import Crypto.Hash (Digest, SHA256)
+import Crypto.JOSE.JWK (thumbprint)
 import Crypto.JWT (JWK)
 import Data.Aeson
 import Data.Aeson.Key qualified as Key
 import Data.Aeson.KeyMap qualified as KM
+import Data.ByteArray (convert)
+import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertToBase)
+import Data.ByteString (ByteString)
+import Data.Text.Encoding (decodeUtf8')
 
 -- | JWKS wrapper for RFC 7517 compliance
 --
@@ -76,9 +83,15 @@ instance ToJSON RFC7517JWK where
             case KM.lookup "kid" baseObj of
               Just existing -> existing
               Nothing ->
-                -- Generate kid from key material hash
-                -- For now, use a placeholder - this should be the RFC 7638 thumbprint
-                String "kid-placeholder"
+                -- RFC 7638: Generate kid from SHA-256 thumbprint
+                let digest = jwk ^. thumbprint :: Digest SHA256
+                    -- Use memory package's convertToBase for proper base64url unpadded encoding
+                    -- base64url only uses ASCII characters, so decoding always succeeds
+                    kidBytes = convertToBase Base64URLUnpadded (convert digest :: ByteString) :: ByteString
+                 in case decodeUtf8' kidBytes of
+                      Right kidText -> String kidText
+                      -- This should never happen as base64url is always valid UTF-8
+                      Left _ -> String "invalid-encoding"
 
           -- Build updated object by extending base with required fields
           updatedObj =
