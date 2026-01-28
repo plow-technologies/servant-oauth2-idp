@@ -100,7 +100,7 @@ module Servant.OAuth2.IDP.Types
 import Control.Monad (forM_, guard, when)
 import Crypto.Random (MonadRandom (getRandomBytes))
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.:?), (.=))
-import Data.Aeson.Types (Parser)
+import Data.Aeson.Types (Parser, withScientific)
 import Data.ByteArray.Encoding (Base (..), convertToBase)
 import Data.ByteString (ByteString)
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit, isHexDigit, isSpace)
@@ -739,8 +739,10 @@ instance ToJSON TokenValidity where
   toJSON (TokenValidity t) = toJSON (floor t :: Int)
 
 -- Parses JSON integer seconds into TokenValidity
+-- | Parse TokenValidity from integer seconds (OAuth2 wire format)
 instance FromJSON TokenValidity where
-  parseJSON = error "not implemented"
+  parseJSON = withScientific "TokenValidity" $ \n ->
+    pure $ mkTokenValidity (fromIntegral (floor n :: Integer))
 
 -- -----------------------------------------------------------------------------
 -- HTTP Response Newtypes
