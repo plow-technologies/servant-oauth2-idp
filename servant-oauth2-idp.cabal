@@ -47,6 +47,7 @@ library
         Servant.OAuth2.IDP.Handlers.Metadata
         Servant.OAuth2.IDP.Handlers.Registration
         Servant.OAuth2.IDP.Handlers.Token
+        Servant.OAuth2.IDP.JWT
         Servant.OAuth2.IDP.JWKS
         Servant.OAuth2.IDP.Metadata
         Servant.OAuth2.IDP.PKCE
