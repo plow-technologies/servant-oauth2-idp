@@ -25,7 +25,6 @@ module Servant.OAuth2.IDP.JWKS
     RFC7517JWK (..),
   ) where
 
-import Control.Lens ((^.))
 import Crypto.Hash (Digest, SHA256)
 import Crypto.JOSE.JWK (thumbprint)
 import Crypto.JWT (JWK)
@@ -36,6 +35,7 @@ import Data.ByteArray (convert)
 import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertToBase)
 import Data.ByteString (ByteString)
 import Data.Text.Encoding (decodeUtf8')
+import Lens.Micro ((^.))
 
 -- | JWKS wrapper for RFC 7517 compliance
 --

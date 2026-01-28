@@ -71,8 +71,8 @@ import Crypto.Random (getRandomBytes)
 import Data.Aeson (Value (Object, String), decode, eitherDecode, encode, object, (.=))
 import Data.Aeson.KeyMap qualified as KM
 import Data.ByteArray (convert)
+import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertToBase)
 import Data.ByteString (ByteString)
-import Data.ByteString.Base64.URL qualified as B64URL
 import Data.ByteString.Lazy qualified as LBS
 import Data.Kind (Type)
 import Data.Maybe (isJust)
@@ -182,8 +182,8 @@ Produces a 43-character base64url-encoded string using CSPRNG per RFC 7636
 -}
 generateCodeVerifier :: IO Text
 generateCodeVerifier = do
-    bytes <- getRandomBytes 32 -- 32 bytes = 256 bits entropy
-    pure $ TE.decodeUtf8 $ B64URL.encodeUnpadded bytes -- 43 chars
+    bytes <- getRandomBytes 32 :: IO ByteString -- 32 bytes = 256 bits entropy
+    pure $ TE.decodeUtf8 (convertToBase Base64URLUnpadded bytes :: ByteString) -- 43 chars
 
 {- | Generate code challenge from verifier using SHA256 (S256 method)
 Uses base64url encoding without padding per RFC 7636
@@ -193,7 +193,7 @@ generateCodeChallenge verifier =
     let verifierBytes = TE.encodeUtf8 verifier
         challengeHash = hashWith SHA256 verifierBytes
         challengeBytes = convert challengeHash :: ByteString
-     in TE.decodeUtf8 $ B64URL.encodeUnpadded challengeBytes
+     in TE.decodeUtf8 (convertToBase Base64URLUnpadded challengeBytes :: ByteString)
 
 {- | Extract session cookie value from HTTP response headers.
 

@@ -271,10 +271,16 @@ data ClientRegistrationResponse = ClientRegistrationResponse
 --
 -- Returned from the token endpoint after successful token exchange.
 -- Contains access token, optional refresh token, and metadata.
+--
+-- The @expires_at@ field provides the Unix timestamp when the token expires,
+-- calculated from the current time plus @expires_in@. This is provided as a
+-- convenience for OAuth2 clients (like Python's authlib) that expect this field
+-- for automatic token refresh.
 data TokenResponse = TokenResponse
   { access_token :: AccessToken
   , token_type :: TokenType
   , expires_in :: Maybe TokenValidity
+  , expires_at :: Maybe Int
   , refresh_token :: Maybe RefreshToken
   , scope :: Maybe Scopes
   }
@@ -288,6 +294,7 @@ deriving instance Eq TokenResponse
 
 -- | FromJSON instance for parsing OAuth token responses
 -- Note: expires_in is parsed as Int per RFC 6749 Section 5.1
+-- Note: expires_at is an optional Int (Unix timestamp) for convenience
 instance Aeson.FromJSON TokenResponse where
   parseJSON = Aeson.withObject "TokenResponse" $ \o -> do
     at <- o Aeson..: "access_token"
@@ -295,9 +302,10 @@ instance Aeson.FromJSON TokenResponse where
     -- expires_in is an integer (seconds) in OAuth responses
     maybeExpiresIn <- o Aeson..:? "expires_in" :: Parser (Maybe Int)
     let ei = mkTokenValidity . fromIntegral <$> maybeExpiresIn
+    ea <- o Aeson..:? "expires_at" :: Parser (Maybe Int)
     rt <- o Aeson..:? "refresh_token"
     sc <- o Aeson..:? "scope"
-    pure $ TokenResponse at tt ei rt sc
+    pure $ TokenResponse at tt ei ea rt sc
 
 -- | Token endpoint request.
 --

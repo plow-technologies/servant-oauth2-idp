@@ -29,8 +29,8 @@ import Crypto.Hash (hashWith)
 import Crypto.Hash.Algorithms (SHA256 (..))
 import Crypto.Random (getRandomBytes)
 import Data.ByteArray (constEq, convert)
+import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertToBase)
 import Data.ByteString (ByteString)
-import Data.ByteString.Base64.URL qualified as B64URL
 import Data.Text.Encoding qualified as TE
 
 import Servant.OAuth2.IDP.Types (CodeChallenge, CodeVerifier, mkCodeChallenge, mkCodeVerifier, unCodeChallenge, unCodeVerifier)
@@ -49,9 +49,9 @@ Implementation uses cryptonite's 'getRandomBytes' for cryptographic randomness.
 -}
 generateCodeVerifier :: IO CodeVerifier
 generateCodeVerifier = do
-    bytes <- getRandomBytes 32 -- 32 bytes = 256 bits entropy
+    bytes <- getRandomBytes 32 :: IO ByteString -- 32 bytes = 256 bits entropy
     -- Base64URL encoding always produces valid UTF-8, so decodeUtf8' cannot fail here
-    case TE.decodeUtf8' $ B64URL.encodeUnpadded bytes of
+    case TE.decodeUtf8' (convertToBase Base64URLUnpadded bytes :: ByteString) of
         Right encoded -> case mkCodeVerifier encoded of
             Just cv -> pure cv
             Nothing -> error "Impossible: 32-byte base64url encoding produced invalid CodeVerifier"
@@ -71,7 +71,7 @@ generateCodeChallenge verifier =
         challengeHash = hashWith SHA256 verifierBytes
         challengeBytes = convert challengeHash :: ByteString
         -- Base64URL encoding always produces valid UTF-8, so decodeUtf8' cannot fail here
-        encoded = case TE.decodeUtf8' $ B64URL.encodeUnpadded challengeBytes of
+        encoded = case TE.decodeUtf8' (convertToBase Base64URLUnpadded challengeBytes :: ByteString) of
             Right txt -> txt
             Left err -> error $ "Impossible: base64url encoding produced invalid UTF-8: " ++ show err
      in case mkCodeChallenge encoded of
