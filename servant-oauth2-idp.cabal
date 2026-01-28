@@ -115,6 +115,7 @@ test-suite servant-oauth2-idp-test
         Servant.OAuth2.IDP.BearerMethodSpec
         Servant.OAuth2.IDP.BrandingSpec
         Servant.OAuth2.IDP.ConfigSpec
+        Servant.OAuth2.IDP.JWKSSpec
         Servant.OAuth2.IDP.TokenRequestSpec
         Servant.OAuth2.IDP.LucidRenderingSpec
         Servant.OAuth2.IDP.TypesSpec
@@ -143,4 +144,5 @@ test-suite servant-oauth2-idp-test
         aeson >= 2.1 && < 2.3,
         bytestring >= 0.11 && < 0.13,
         async >= 2.2 && < 2.3,
-        lucid >= 2.11 && < 2.12
+        lucid >= 2.11 && < 2.12,
+        jose >= 0.10 && < 0.12
