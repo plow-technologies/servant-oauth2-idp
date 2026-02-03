@@ -4,6 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
 -- |
@@ -62,6 +63,8 @@ module Servant.OAuth2.IDP.Types
     OAuthState (..),
     ResourceIndicator (..),
     ClientSecret,
+    pattern PublicClientSecret,
+    pattern ConfidentialClientSecret,
     mkClientSecret,
     unClientSecret,
     ClientName,
@@ -695,6 +698,38 @@ newtype ClientSecret = ClientSecret {unClientSecret :: Text}
   deriving stock (Eq, Show, Generic)
   deriving newtype (FromJSON, ToJSON)
 
+-- | Bidirectional pattern for public client secrets (OAuth 2.1 native apps, SPAs).
+-- Public clients do not have secrets per RFC 6749 Section 2.1.
+--
+-- Can be used for both construction and pattern matching:
+--
+-- @
+-- -- Construction
+-- let secret = PublicClientSecret
+--
+-- -- Pattern matching
+-- case secret of
+--   PublicClientSecret -> "public client"
+--   _ -> "confidential client"
+-- @
+pattern PublicClientSecret :: ClientSecret
+pattern PublicClientSecret = ClientSecret ""
+
+-- | Unidirectional pattern for confidential client secrets.
+-- Use for pattern matching to extract the secret value.
+-- Construction MUST go through 'mkClientSecret' smart constructor.
+--
+-- @
+-- case secret of
+--   PublicClientSecret -> handlePublicClient
+--   ConfidentialClientSecret s -> validateSecret s
+-- @
+pattern ConfidentialClientSecret :: Text -> ClientSecret
+pattern ConfidentialClientSecret s <- ClientSecret s
+
+-- | Patterns cover all ClientSecret cases
+{-# COMPLETE PublicClientSecret, ConfidentialClientSecret #-}
+
 -- | Smart constructor for ClientSecret (allows empty for public clients)
 mkClientSecret :: Text -> Maybe ClientSecret
 mkClientSecret t = Just (ClientSecret t)
@@ -739,6 +774,7 @@ instance ToJSON TokenValidity where
   toJSON (TokenValidity t) = toJSON (floor t :: Int)
 
 -- Parses JSON integer seconds into TokenValidity
+
 -- | Parse TokenValidity from integer seconds (OAuth2 wire format)
 instance FromJSON TokenValidity where
   parseJSON = withScientific "TokenValidity" $ \n ->
