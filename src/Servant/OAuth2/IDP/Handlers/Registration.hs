@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- |
@@ -38,11 +37,7 @@ import Servant.OAuth2.IDP.Errors
   )
 import Servant.OAuth2.IDP.Store (OAuthStateStore (..))
 import Servant.OAuth2.IDP.Trace (OAuthTrace (..))
-import Servant.OAuth2.IDP.Types
-  ( ClientInfo (..),
-    generateClientId,
-    mkClientSecret,
-  )
+import Servant.OAuth2.IDP.Types hiding (unClientSecret)
 
 -- | Dynamic client registration endpoint (polymorphic).
 --
@@ -120,11 +115,10 @@ handleRegister (ClientRegistrationRequest clientName reqRedirects reqGrants reqR
   -- Emit trace (use first redirect URI from NonEmpty list)
   liftIO $ traceWith tracer $ TraceClientRegistration clientId (NE.head redirectsNE)
 
-  let clientSecretNewtype = case mkClientSecret "" of
-        Just cs -> cs
-        Nothing -> error "mkClientSecret should never fail for empty string"
+  -- Public clients have empty secret.
+  let clientSecretNewtype = PublicClientSecret
 
-  return
+  pure
     ClientRegistrationResponse
       { client_id = clientId
       , client_secret = clientSecretNewtype
