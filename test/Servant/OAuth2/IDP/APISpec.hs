@@ -1,3 +1,4 @@
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
@@ -20,6 +21,7 @@ import Data.Aeson.Types (Value (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust, isJust, isNothing)
 import Data.Set qualified as Set
+import Data.Time.Clock.POSIX (POSIXTime)
 import Servant.OAuth2.IDP.API (ClientRegistrationRequest (..), ClientRegistrationResponse (..), TokenResponse (..))
 import Servant.OAuth2.IDP.Types
   ( AccessToken (..),
@@ -47,7 +49,18 @@ spec = do
             clientSecret = fromJust $ mkClientSecret ""
             clientName = fromJust $ mkClientName "Test Client"
             redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
-            response = ClientRegistrationResponse clientId clientSecret clientName (redirectUri :| []) (GrantAuthorizationCode :| []) (ResponseCode :| []) AuthNone
+            testTime = 1000000.0 :: POSIXTime
+            response :: ClientRegistrationResponse =
+              ClientRegistrationResponse
+                { client_id = clientId
+                , client_secret = clientSecret
+                , client_id_issued_at = testTime
+                , client_name = clientName
+                , redirect_uris = redirectUri :| []
+                , grant_types = GrantAuthorizationCode :| []
+                , response_types = ResponseCode :| []
+                , token_endpoint_auth_method = AuthNone
+                }
             encoded = encode response
             decoded = decode encoded :: Maybe Value
 
@@ -63,7 +76,18 @@ spec = do
             clientSecret = fromJust $ mkClientSecret "" -- Empty for public clients
             clientName = fromJust $ mkClientName "Public Client"
             redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
-            response = ClientRegistrationResponse clientId clientSecret clientName (redirectUri :| []) (GrantAuthorizationCode :| []) (ResponseCode :| []) AuthNone
+            testTime = 1000000.0 :: POSIXTime
+            response :: ClientRegistrationResponse =
+              ClientRegistrationResponse
+                { client_id = clientId
+                , client_secret = clientSecret
+                , client_id_issued_at = testTime
+                , client_name = clientName
+                , redirect_uris = redirectUri :| []
+                , grant_types = GrantAuthorizationCode :| []
+                , response_types = ResponseCode :| []
+                , token_endpoint_auth_method = AuthNone
+                }
             encoded = encode response
             decoded = decode encoded :: Maybe Value
 
@@ -77,7 +101,68 @@ spec = do
             clientSecret = fromJust $ mkClientSecret "secret_confidential"
             clientName = fromJust $ mkClientName "My Application"
             redirectUri = fromJust $ mkRedirectUri "https://app.example.com/auth"
-            response = ClientRegistrationResponse clientId clientSecret clientName (redirectUri :| []) (GrantAuthorizationCode :| []) (ResponseCode :| []) AuthNone
+            testTime = 1000000.0 :: POSIXTime
+            response :: ClientRegistrationResponse =
+              ClientRegistrationResponse
+                { client_id = clientId
+                , client_secret = clientSecret
+                , client_id_issued_at = testTime
+                , client_name = clientName
+                , redirect_uris = redirectUri :| []
+                , grant_types = GrantAuthorizationCode :| []
+                , response_types = ResponseCode :| []
+                , token_endpoint_auth_method = AuthNone
+                }
+            encoded = encode response
+            decoded = decode encoded :: Maybe Value
+
+        case decoded of
+          Just (Object obj) ->
+            KM.lookup "client_name" obj `shouldBe` Just (String "My Application")
+          _ -> expectationFailure "Expected JSON object"
+
+      it "serializes client_secret as unwrapped Text (empty for public clients)" $ do
+        let clientId = fromJust $ mkClientId "client_public"
+            clientSecret = fromJust $ mkClientSecret "" -- Empty for public clients
+            clientName = fromJust $ mkClientName "Public Client"
+            redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
+            testTime = 1000000.0 :: POSIXTime
+            response =
+              ClientRegistrationResponse
+                { client_id = clientId
+                , client_secret = clientSecret
+                , client_id_issued_at = testTime
+                , client_name = clientName
+                , redirect_uris = redirectUri :| []
+                , grant_types = GrantAuthorizationCode :| []
+                , response_types = ResponseCode :| []
+                , token_endpoint_auth_method = AuthNone
+                }
+            encoded = encode response
+            decoded = decode encoded :: Maybe Value
+
+        case decoded of
+          Just (Object obj) ->
+            KM.lookup "client_secret" obj `shouldBe` Just (String "")
+          _ -> expectationFailure "Expected JSON object"
+
+      it "serializes client_name as unwrapped Text" $ do
+        let clientId = fromJust $ mkClientId "client_xyz"
+            clientSecret = fromJust $ mkClientSecret "secret_confidential"
+            clientName = fromJust $ mkClientName "My Application"
+            redirectUri = fromJust $ mkRedirectUri "https://app.example.com/auth"
+            testTime = 1000000.0 :: POSIXTime
+            response =
+              ClientRegistrationResponse
+                { client_id = clientId
+                , client_secret = clientSecret
+                , client_id_issued_at = testTime
+                , client_name = clientName
+                , redirect_uris = redirectUri :| []
+                , grant_types = GrantAuthorizationCode :| []
+                , response_types = ResponseCode :| []
+                , token_endpoint_auth_method = AuthNone
+                }
             encoded = encode response
             decoded = decode encoded :: Maybe Value
 

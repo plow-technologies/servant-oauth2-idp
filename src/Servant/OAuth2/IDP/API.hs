@@ -46,10 +46,12 @@ module Servant.OAuth2.IDP.API
     TokenResponse (..),
   ) where
 
+import Data.Aeson (object, (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (Parser)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
+import Data.Time.Clock.POSIX (POSIXTime)
 import GHC.Generics (Generic)
 import Servant
   ( FormUrlEncoded,
@@ -259,13 +261,27 @@ data ClientRegistrationRequest = ClientRegistrationRequest
 data ClientRegistrationResponse = ClientRegistrationResponse
   { client_id :: ClientId
   , client_secret :: ClientSecret -- Empty string for public clients
+  , client_id_issued_at :: POSIXTime -- RFC 7591 required Unix timestamp
   , client_name :: ClientName
   , redirect_uris :: NonEmpty RedirectUri
   , grant_types :: NonEmpty GrantType
   , response_types :: NonEmpty ResponseType
   , token_endpoint_auth_method :: ClientAuthMethod
   }
-  deriving (Show, Generic, Aeson.ToJSON)
+  deriving (Show, Generic)
+
+instance Aeson.ToJSON ClientRegistrationResponse where
+  toJSON (ClientRegistrationResponse clientId clientSecret clientIdIssuedAt clientNm redirectUris grantTypes responseTypes authMethod) =
+    object
+      [ "client_id" .= clientId
+      , "client_secret" .= clientSecret
+      , "client_id_issued_at" .= (floor clientIdIssuedAt :: Int)
+      , "client_name" .= clientNm
+      , "redirect_uris" .= redirectUris
+      , "grant_types" .= grantTypes
+      , "response_types" .= responseTypes
+      , "token_endpoint_auth_method" .= authMethod
+      ]
 
 -- | Token endpoint response.
 --
