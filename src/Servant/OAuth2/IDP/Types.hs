@@ -109,6 +109,7 @@ import Data.ByteString (ByteString)
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit, isHexDigit, isSpace)
 import Data.Hashable (Hashable (..))
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromJust, isNothing)
 import Data.Set (Set)
 import Data.Set qualified as Set
@@ -759,6 +760,15 @@ mkClientName t
   | otherwise = Just (ClientName t)
 
 instance Hashable ClientName
+
+-- | Arbitrary instance for ClientName generator for property-based testing
+instance Arbitrary ClientName where
+  arbitrary = do
+    -- Generate non-empty text that passes mkClientName validation
+    nameChars <- NE.toList . NE.fromList <$> listOf1 (elements "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- ")
+    let nameText = T.pack nameChars
+    maybe arbitrary pure (mkClientName nameText)
+  shrink _ = []
 
 -- | OAuth access token (FR-063)
 newtype AccessToken = AccessToken {unAccessToken :: Text}
