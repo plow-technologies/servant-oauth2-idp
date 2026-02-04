@@ -39,6 +39,7 @@ library
     exposed-modules:
         Servant.OAuth2.IDP.API
         Servant.OAuth2.IDP.Config
+        Servant.OAuth2.IDP.DCR.Error
         Servant.OAuth2.IDP.Errors
         Servant.OAuth2.IDP.Handlers
         Servant.OAuth2.IDP.Handlers.Authorization
