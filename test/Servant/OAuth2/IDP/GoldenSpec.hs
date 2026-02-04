@@ -82,10 +82,12 @@ instance Arbitrary API.ClientRegistrationRequest where
 -- | Arbitrary instance for ClientRegistrationResponse
 --
 -- Generates valid RFC 7591 compliant responses with all required fields.
+-- The @client_secret@ is Nothing for public clients (omitted in JSON) and
+-- Just for confidential clients (included in JSON).
 instance Arbitrary API.ClientRegistrationResponse where
   arbitrary = do
     client_id <- arbitrary
-    client_secret <- arbitrary
+    client_secret <- arbitrary :: Gen (Maybe ClientSecret)
     client_name <- arbitrary
     uri1 <- arbitrary
     uris <- listOf1 arbitrary

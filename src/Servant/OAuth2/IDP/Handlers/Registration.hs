@@ -115,13 +115,13 @@ handleRegister (ClientRegistrationRequest clientName reqRedirects reqGrants reqR
   -- Emit trace (use first redirect URI from NonEmpty list)
   liftIO $ traceWith tracer $ TraceClientRegistration clientId (NE.head redirectsNE)
 
-  -- Public clients have empty secret.
-  let clientSecretNewtype = PublicClientSecret
+  -- Public clients have no client_secret (RFC 7591 Section 3.3.3)
+  -- The field is omitted from JSON response when Nothing
 
   pure
     ClientRegistrationResponse
       { client_id = clientId
-      , client_secret = clientSecretNewtype
+      , client_secret = Nothing  -- No secret for public clients
       , client_id_issued_at = currentTime
       , client_name = clientName
       , redirect_uris = reqRedirects

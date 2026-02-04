@@ -46,7 +46,7 @@ spec = do
     context "ToJSON instance unwraps newtypes correctly" $ do
       it "serializes client_id as unwrapped Text" $ do
         let clientId = fromJust $ mkClientId "client_abc123"
-            clientSecret = fromJust $ mkClientSecret ""
+            clientSecret = Just $ fromJust $ mkClientSecret ""
             clientName = fromJust $ mkClientName "Test Client"
             redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
             testTime = 1000000.0 :: POSIXTime
@@ -73,7 +73,7 @@ spec = do
 
       it "serializes client_secret as unwrapped Text (empty for public clients)" $ do
         let clientId = fromJust $ mkClientId "client_public"
-            clientSecret = fromJust $ mkClientSecret "" -- Empty for public clients
+            clientSecret = Nothing -- Nothing for public clients (omitted from JSON)
             clientName = fromJust $ mkClientName "Public Client"
             redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
             testTime = 1000000.0 :: POSIXTime
@@ -93,12 +93,12 @@ spec = do
 
         case decoded of
           Just (Object obj) ->
-            KM.lookup "client_secret" obj `shouldBe` Just (String "")
+            KM.lookup "client_secret" obj `shouldBe` Nothing  -- Field omitted when Nothing
           _ -> expectationFailure "Expected JSON object"
 
       it "serializes client_name as unwrapped Text" $ do
         let clientId = fromJust $ mkClientId "client_xyz"
-            clientSecret = fromJust $ mkClientSecret "secret_confidential"
+            clientSecret = Just $ fromJust $ mkClientSecret "secret_confidential"
             clientName = fromJust $ mkClientName "My Application"
             redirectUri = fromJust $ mkRedirectUri "https://app.example.com/auth"
             testTime = 1000000.0 :: POSIXTime
@@ -123,7 +123,7 @@ spec = do
 
       it "serializes client_secret as unwrapped Text (empty for public clients)" $ do
         let clientId = fromJust $ mkClientId "client_public"
-            clientSecret = fromJust $ mkClientSecret "" -- Empty for public clients
+            clientSecret = Nothing -- Nothing for public clients (omitted from JSON)
             clientName = fromJust $ mkClientName "Public Client"
             redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
             testTime = 1000000.0 :: POSIXTime
@@ -143,12 +143,12 @@ spec = do
 
         case decoded of
           Just (Object obj) ->
-            KM.lookup "client_secret" obj `shouldBe` Just (String "")
+            KM.lookup "client_secret" obj `shouldBe` Nothing  -- Field omitted when Nothing
           _ -> expectationFailure "Expected JSON object"
 
       it "serializes client_name as unwrapped Text" $ do
         let clientId = fromJust $ mkClientId "client_xyz"
-            clientSecret = fromJust $ mkClientSecret "secret_confidential"
+            clientSecret = Just $ fromJust $ mkClientSecret "secret_confidential"
             clientName = fromJust $ mkClientName "My Application"
             redirectUri = fromJust $ mkRedirectUri "https://app.example.com/auth"
             testTime = 1000000.0 :: POSIXTime

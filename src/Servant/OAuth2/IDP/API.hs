@@ -50,6 +50,7 @@ import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (Parser)
 import Data.Hashable (Hashable (..))
 import Data.List.NonEmpty (NonEmpty)
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (POSIXTime)
 import GHC.Generics (Generic)
@@ -276,10 +277,12 @@ instance Hashable ClientRegistrationRequest where
 -- | Client registration response.
 --
 -- Returned after successful client registration. Contains client credentials
--- and registered metadata.
+-- and registered metadata. The @client_secret@ field is 'Nothing' for public
+-- clients (omitted from JSON per RFC 7591 Section 3.3.3) and 'Just' for
+-- confidential clients.
 data ClientRegistrationResponse = ClientRegistrationResponse
   { client_id :: ClientId
-  , client_secret :: ClientSecret -- Empty string for public clients
+  , client_secret :: Maybe ClientSecret -- Nothing for public clients (omitted in JSON)
   , client_id_issued_at :: POSIXTime -- RFC 7591 required Unix timestamp
   , client_name :: ClientName
   , redirect_uris :: NonEmpty RedirectUri
@@ -293,15 +296,15 @@ instance Aeson.FromJSON ClientRegistrationResponse
 
 instance Aeson.ToJSON ClientRegistrationResponse where
   toJSON (ClientRegistrationResponse clientId clientSecret clientIdIssuedAt clientNm redirectUris grantTypes responseTypes authMethod) =
-    object
-      [ "client_id" .= clientId
-      , "client_secret" .= clientSecret
-      , "client_id_issued_at" .= (floor clientIdIssuedAt :: Int)
-      , "client_name" .= clientNm
-      , "redirect_uris" .= redirectUris
-      , "grant_types" .= grantTypes
-      , "response_types" .= responseTypes
-      , "token_endpoint_auth_method" .= authMethod
+    object $ catMaybes
+      [ Just ("client_id" .= clientId)
+      , ("client_secret" .=) <$> clientSecret  -- Only include if Just
+      , Just ("client_id_issued_at" .= (floor clientIdIssuedAt :: Int))
+      , Just ("client_name" .= clientNm)
+      , Just ("redirect_uris" .= redirectUris)
+      , Just ("grant_types" .= grantTypes)
+      , Just ("response_types" .= responseTypes)
+      , Just ("token_endpoint_auth_method" .= authMethod)
       ]
 
 -- | Token endpoint response.
