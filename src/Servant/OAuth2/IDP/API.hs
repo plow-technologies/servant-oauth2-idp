@@ -79,7 +79,7 @@ import Servant.OAuth2.IDP.Metadata (OAuthMetadata, ProtectedResourceMetadata)
 import Servant.OAuth2.IDP.Types
   ( AccessToken,
     AuthCodeId,
-    ClientAuthMethod,
+    ClientAuthMethod (..),
     ClientId,
     ClientName,
     ClientSecret,

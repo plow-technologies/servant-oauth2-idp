@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
@@ -25,6 +24,13 @@
 -- * FR-021: RFC 7591 compliance for ClientRegistrationRequest
 -- * FR-022: RFC 7591 compliance for ClientRegistrationResponse
 -- * SC-008: JSON serialization produces RFC 7591 compliant field names
+--
+-- = Arbitrary Instances
+--
+-- Arbitrary instances for ClientRegistrationRequest and ClientRegistrationResponse
+-- are defined in this test module. This is acceptable for test code per the
+-- constitution (orphan instances are allowed in tests). The instances use smart
+-- constructors to generate valid RFC 7591 compliant values.
 module Servant.OAuth2.IDP.GoldenSpec (spec) where
 
 import Data.List.NonEmpty (NonEmpty (..))
@@ -53,7 +59,6 @@ instance Arbitrary Text where
 instance Arbitrary ClientSecret where
   arbitrary = fromJust . mkClientSecret <$> (arbitrary :: Gen Text)
   shrink _ = []
-
 
 -- | Arbitrary instance for ClientRegistrationRequest
 --
