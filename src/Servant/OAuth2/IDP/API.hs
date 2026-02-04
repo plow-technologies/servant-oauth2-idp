@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -49,6 +48,7 @@ module Servant.OAuth2.IDP.API
 import Data.Aeson (object, (.=))
 import Data.Aeson qualified as Aeson
 import Data.Aeson.Types (Parser)
+import Data.Hashable (Hashable (..))
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (POSIXTime)
@@ -252,7 +252,26 @@ data ClientRegistrationRequest = ClientRegistrationRequest
   , response_types :: NonEmpty ResponseType
   , token_endpoint_auth_method :: ClientAuthMethod
   }
-  deriving (Show, Generic, Aeson.FromJSON)
+  deriving (Eq, Show, Generic)
+
+instance Aeson.FromJSON ClientRegistrationRequest
+
+instance Aeson.ToJSON ClientRegistrationRequest where
+  toJSON =
+    Aeson.genericToJSON
+      Aeson.defaultOptions
+        { Aeson.fieldLabelModifier = Aeson.camelTo2 '_'
+        , Aeson.omitNothingFields = True
+        }
+
+instance Hashable ClientRegistrationRequest where
+  hashWithSalt s (ClientRegistrationRequest a b c d e) =
+    s
+      `hashWithSalt` show a
+      `hashWithSalt` fmap show b
+      `hashWithSalt` fmap show c
+      `hashWithSalt` fmap show d
+      `hashWithSalt` show e
 
 -- | Client registration response.
 --
@@ -269,6 +288,8 @@ data ClientRegistrationResponse = ClientRegistrationResponse
   , token_endpoint_auth_method :: ClientAuthMethod
   }
   deriving (Show, Generic)
+
+instance Aeson.FromJSON ClientRegistrationResponse
 
 instance Aeson.ToJSON ClientRegistrationResponse where
   toJSON (ClientRegistrationResponse clientId clientSecret clientIdIssuedAt clientNm redirectUris grantTypes responseTypes authMethod) =
