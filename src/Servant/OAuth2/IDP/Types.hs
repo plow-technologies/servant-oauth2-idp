@@ -107,6 +107,7 @@ import Data.Aeson.Types (Parser, withScientific)
 import Data.ByteArray.Encoding (Base (..), convertToBase)
 import Data.ByteString (ByteString)
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit, isHexDigit, isSpace)
+import Data.Hashable (Hashable (..))
 import Data.List.NonEmpty (NonEmpty ((:|)), nonEmpty)
 import Data.Maybe (fromJust, isNothing)
 import Data.Set (Set)
@@ -163,6 +164,8 @@ instance FromHttpApiData ClientId where
 
 instance ToHttpApiData ClientId where
   toUrlPiece = unClientId
+
+instance Hashable ClientId
 
 -- | Session identifier for pending authorizations
 newtype SessionId = SessionId {unSessionId :: Text}
@@ -352,6 +355,10 @@ instance FromHttpApiData RedirectUri where
 
 instance ToHttpApiData RedirectUri where
   toUrlPiece (RedirectUri uri) = T.pack (uriToString id uri "")
+
+-- | Hashable for RedirectUri: hash the URI string representation
+instance Hashable RedirectUri where
+  hashWithSalt salt uri = hashWithSalt salt (show (unRedirectUri uri))
 
 -- | Parse IPv4 address "a.b.c.d" into octets (FR-051)
 -- Parse as Integer first to prevent Word8 overflow bypass.
@@ -696,7 +703,7 @@ instance ToHttpApiData ResourceIndicator where
 -- | OAuth client secret (FR-062)
 newtype ClientSecret = ClientSecret {unClientSecret :: Text}
   deriving stock (Eq, Show, Generic)
-  deriving newtype (FromJSON, ToJSON)
+  deriving newtype (FromJSON, ToJSON, Hashable)
 
 -- | Bidirectional pattern for public client secrets (OAuth 2.1 native apps, SPAs).
 -- Public clients do not have secrets per RFC 6749 Section 2.1.
@@ -734,6 +741,12 @@ pattern ConfidentialClientSecret s <- ClientSecret s
 mkClientSecret :: Text -> Maybe ClientSecret
 mkClientSecret t = Just (ClientSecret t)
 
+instance FromHttpApiData ClientSecret where
+  parseUrlPiece = Right . ClientSecret
+
+instance ToHttpApiData ClientSecret where
+  toUrlPiece = unClientSecret
+
 -- | OAuth client name (FR-062)
 newtype ClientName = ClientName {unClientName :: Text}
   deriving stock (Eq, Show, Generic)
@@ -744,6 +757,8 @@ mkClientName :: Text -> Maybe ClientName
 mkClientName t
   | T.null t = Nothing
   | otherwise = Just (ClientName t)
+
+instance Hashable ClientName
 
 -- | OAuth access token (FR-063)
 newtype AccessToken = AccessToken {unAccessToken :: Text}
@@ -855,6 +870,8 @@ instance ToHttpApiData GrantType where
   toUrlPiece GrantRefreshToken = "refresh_token"
   toUrlPiece GrantClientCredentials = "client_credentials"
 
+instance Hashable GrantType
+
 -- | OAuth response type
 data ResponseType
   = ResponseCode
@@ -880,6 +897,8 @@ instance FromHttpApiData ResponseType where
 instance ToHttpApiData ResponseType where
   toUrlPiece ResponseCode = "code"
   toUrlPiece ResponseToken = "token"
+
+instance Hashable ResponseType
 
 -- | Client authentication method
 data ClientAuthMethod
