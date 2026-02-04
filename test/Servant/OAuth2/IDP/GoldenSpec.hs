@@ -37,6 +37,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Time.Clock.POSIX (POSIXTime)
 import Test.Aeson.GenericSpecs (roundtripAndGoldenSpecs)
 import Test.Hspec (Spec, describe)
@@ -51,9 +52,9 @@ import Servant.OAuth2.IDP.Types
   )
 
 -- | Arbitrary instance for Text (needed for ClientSecret)
+-- Generates arbitrary Text using QuickCheck's string generator
 instance Arbitrary Text where
-  arbitrary = arbitrary
-  shrink = shrink
+  arbitrary = T.pack <$> arbitrary
 
 -- | Arbitrary instance for ClientSecret using smart constructor
 instance Arbitrary ClientSecret where
