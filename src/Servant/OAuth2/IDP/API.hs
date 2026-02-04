@@ -287,7 +287,7 @@ data ClientRegistrationResponse = ClientRegistrationResponse
   , response_types :: NonEmpty ResponseType
   , token_endpoint_auth_method :: ClientAuthMethod
   }
-  deriving (Show, Generic)
+  deriving (Eq, Show, Generic)
 
 instance Aeson.FromJSON ClientRegistrationResponse
 
@@ -372,8 +372,8 @@ data TokenRequest
     RefreshTokenGrant
       { reqRefreshToken :: RefreshTokenId
       , reqResource :: Maybe ResourceIndicator
-      }
-  deriving (Show, Generic)
+  }
+  deriving (Eq, Show, Generic)
 
 -- | Parse token request from form-encoded data.
 --

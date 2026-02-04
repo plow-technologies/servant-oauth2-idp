@@ -46,6 +46,7 @@ import Servant.OAuth2.IDP.BrandingSpec qualified as BrandingSpec
 import Servant.OAuth2.IDP.ConfigSpec qualified as ConfigSpec
 import Servant.OAuth2.IDP.CryptoEntropySpec qualified as CryptoEntropySpec
 import Servant.OAuth2.IDP.ErrorsSpec qualified as ErrorsSpec
+import Servant.OAuth2.IDP.GoldenSpec qualified as GoldenSpec
 import Servant.OAuth2.IDP.Handlers.MetadataSpec qualified as HandlersMetadataSpec
 import Servant.OAuth2.IDP.JWKSSpec qualified as JWKSSpec
 import Servant.OAuth2.IDP.LucidRenderingSpec qualified as LucidRenderingSpec
@@ -107,6 +108,7 @@ spec = do
         ConfigSpec.spec
         CryptoEntropySpec.spec
         ErrorsSpec.spec
+        GoldenSpec.spec
         HandlersMetadataSpec.spec
         JWKSSpec.spec
         LucidRenderingSpec.spec
