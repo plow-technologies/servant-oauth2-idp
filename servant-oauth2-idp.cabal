@@ -136,6 +136,7 @@ test-suite servant-oauth2-idp-test
         hspec >= 2.10 && < 2.12,
         hspec-golden-aeson >= 0.10 && < 0.11,
         QuickCheck >= 2.14 && < 2.16,
+        quickcheck-instances >= 0.3 && < 0.4,
         time >= 1.12 && < 1.13,
         containers >= 0.6 && < 0.7,
         mtl >= 2.3 && < 2.4,
