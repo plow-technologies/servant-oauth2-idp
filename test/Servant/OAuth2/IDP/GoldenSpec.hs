@@ -44,6 +44,7 @@ import Test.QuickCheck (Arbitrary (..), Gen, elements, listOf1)
 import Test.QuickCheck.Instances.Text ()  -- Provides Arbitrary Text
 
 import Servant.OAuth2.IDP.API qualified as API
+import Servant.OAuth2.IDP.DCR.Error (DCRError, DCRErrorCode)
 import Servant.OAuth2.IDP.Types
   ( ClientAuthMethod (..),
     ClientSecret,
@@ -115,6 +116,10 @@ spec = describe "ClientRegistration Golden Tests (RFC 7591)" $ do
   -- Verifies snake_case field names per RFC 7591 Section 3.2.1
   clientRegistrationResponseTests
 
+  -- FR-023: DCRErrorCode and DCRError roundtrip and golden tests
+  -- Verifies RFC 7591 Section 3.2.2 error format
+  dcrErrorTests
+
 -- | ClientRegistrationRequest golden tests (RFC 7591 Section 2.1)
 --
 -- SC-008: Validates that field names use snake_case:
@@ -143,3 +148,15 @@ clientRegistrationResponseTests :: Spec
 clientRegistrationResponseTests = do
   describe "ClientRegistrationResponse" $ do
     roundtripAndGoldenSpecs (Proxy @API.ClientRegistrationResponse)
+
+-- | DCRErrorCode and DCRError golden tests (RFC 7591 Section 3.2.2)
+--
+-- FR-023: Validates RFC 7591 error response format:
+-- * DCRErrorCode wire format (snake_case error codes)
+-- * DCRError wire format ({"error": "...", "error_description": "..."})
+dcrErrorTests :: Spec
+dcrErrorTests = do
+  describe "DCRErrorCode" $ do
+    roundtripAndGoldenSpecs (Proxy @DCRErrorCode)
+  describe "DCRError" $ do
+    roundtripAndGoldenSpecs (Proxy @DCRError)

@@ -1,0 +1,22 @@
+{
+    "samples": [
+        {
+            "error": "invalid_client_metadata"
+        },
+        {
+            "error": "invalid_redirect_uri",
+            "error_description": "q"
+        },
+        {
+            "error": "invalid_redirect_uri"
+        },
+        {
+            "error": "access_denied",
+            "error_description": "f"
+        },
+        {
+            "error": "invalid_redirect_uri"
+        }
+    ],
+    "seed": -1427438401
+}

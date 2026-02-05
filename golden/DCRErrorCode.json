@@ -1,0 +1,10 @@
+{
+    "samples": [
+        "invalid_redirect_uri",
+        "access_denied",
+        "access_denied",
+        "invalid_redirect_uri",
+        "access_denied"
+    ],
+    "seed": 342168574
+}
