@@ -1,41 +1,44 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{- |
-Module      : Servant.OAuth2.IDP.DCR.RegistrationAccessToken
-Description : Registration Access Token for Dynamic Client Registration (RFC 7592)
-Copyright   : (C) 2025 PakSCADA LLC
-License     : MIT
-Maintainer  : mpg@mpg.is, alberto.valverde@pakenergy.com
-Stability   : experimental
-Portability : GHC
-
-Opaque 'RegistrationAccessToken' and 'HashedRegistrationAccessToken' types
-for Dynamic Client Registration management endpoints per RFC 7592.
-
-Tokens use a @dcr_@ prefix with 32 bytes of cryptographically secure random
-data encoded as hex (256 bits of entropy). Hashing uses bcrypt for secure
-server-side storage.
--}
+-- |
+-- Module      : Servant.OAuth2.IDP.DCR.RegistrationAccessToken
+-- Description : Registration Access Token for Dynamic Client Registration (RFC 7592)
+-- Copyright   : (C) 2025 PakSCADA LLC
+-- License     : MIT
+-- Maintainer  : mpg@mpg.is, alberto.valverde@pakenergy.com
+-- Stability   : experimental
+-- Portability : GHC
+--
+-- Opaque 'RegistrationAccessToken' and 'HashedRegistrationAccessToken' types
+-- for Dynamic Client Registration management endpoints per RFC 7592.
+--
+-- Tokens use a @dcr_@ prefix with 32 bytes of cryptographically secure random
+-- data encoded as hex (256 bits of entropy). Hashing uses bcrypt for secure
+-- server-side storage.
 module Servant.OAuth2.IDP.DCR.RegistrationAccessToken
   ( -- * Opaque types
-    RegistrationAccessToken
-  , HashedRegistrationAccessToken
+    RegistrationAccessToken,
+    HashedRegistrationAccessToken,
+
     -- * Smart constructors
-  , mkRegistrationAccessToken
-  , generateRegistrationAccessToken
-  , unRegistrationAccessToken
-  , mkHashedRegistrationAccessToken
-  , unHashedRegistrationAccessToken
+    mkRegistrationAccessToken,
+    generateRegistrationAccessToken,
+    unRegistrationAccessToken,
+    mkHashedRegistrationAccessToken,
+    unHashedRegistrationAccessToken,
+
     -- * Predicates
-  , isRegistrationAccessToken
+    isRegistrationAccessToken,
+
     -- * Hashing
-  , hashRegistrationAccessToken
-  , verifyRegistrationAccessToken
+    hashRegistrationAccessToken,
+    verifyRegistrationAccessToken,
   ) where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Crypto.BCrypt qualified as BCrypt
-import Crypto.Random (getRandomBytes)
+import Crypto.Random (MonadRandom (getRandomBytes))
 import Data.Aeson (FromJSON (..), ToJSON (..), withText)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
@@ -113,20 +116,20 @@ unHashedRegistrationAccessToken (HashedRegistrationAccessToken bs) = bs
 --
 -- Produces @dcr_@ followed by 64 lowercase hex characters (32 random bytes,
 -- giving 256 bits of entropy).
-generateRegistrationAccessToken :: IO RegistrationAccessToken
+generateRegistrationAccessToken :: (MonadRandom m) => m RegistrationAccessToken
 generateRegistrationAccessToken = do
-  bytes <- getRandomBytes 32 :: IO ByteString
+  (bytes :: ByteString) <- getRandomBytes 32
   -- Base16 encoding always produces valid ASCII; decodeUtf8' is total here
   let hexBytes = convertToBase Base16 bytes :: ByteString
-      hex = TE.decodeUtf8 hexBytes  -- safe: Base16 output is ASCII subset of UTF-8
+      hex = TE.decodeUtf8 hexBytes -- safe: Base16 output is ASCII subset of UTF-8
   pure (RegistrationAccessToken ("dcr_" <> hex))
 
 -- | Hash a 'RegistrationAccessToken' using bcrypt for secure storage.
 --
 -- Returns 'Nothing' if bcrypt hashing fails (extremely unlikely in practice).
 -- Always store the hash, never the plaintext token.
-hashRegistrationAccessToken :: RegistrationAccessToken -> IO (Maybe HashedRegistrationAccessToken)
-hashRegistrationAccessToken (RegistrationAccessToken t) = do
+hashRegistrationAccessToken :: (MonadIO m) => RegistrationAccessToken -> m (Maybe HashedRegistrationAccessToken)
+hashRegistrationAccessToken (RegistrationAccessToken t) = liftIO $ do
   result <- BCrypt.hashPasswordUsingPolicy BCrypt.slowerBcryptHashingPolicy (TE.encodeUtf8 t)
   pure (HashedRegistrationAccessToken <$> result)
 

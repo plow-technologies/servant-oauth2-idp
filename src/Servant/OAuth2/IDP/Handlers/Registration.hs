@@ -20,6 +20,7 @@ import Control.Monad (when)
 import Control.Monad.Error.Class (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, asks)
+import Crypto.Random (MonadRandom)
 import Data.Generics.Product (HasType)
 import Data.Generics.Product.Typed (getTyped)
 import Data.Generics.Sum.Typed (AsType, injectTyped)
@@ -34,7 +35,7 @@ import Servant.OAuth2.IDP.API
   )
 import Servant.OAuth2.IDP.Config (OAuthEnv (..))
 import Servant.OAuth2.IDP.DCR.RegistrationAccessToken
-  ( generateRegistrationAccessToken
+  ( generateRegistrationAccessToken,
   )
 import Servant.OAuth2.IDP.Errors
   ( ValidationError (..),
@@ -74,6 +75,7 @@ import Servant.OAuth2.IDP.Types hiding (unClientSecret)
 handleRegister ::
   ( OAuthStateStore m
   , MonadIO m
+  , MonadRandom m
   , MonadReader env m
   , MonadError e m
   , AsType ValidationError e
@@ -120,7 +122,7 @@ handleRegister (ClientRegistrationRequest clientName reqRedirects reqGrants reqR
   liftIO $ traceWith tracer $ TraceClientRegistration clientId (NE.head redirectsNE)
 
   -- Generate registration access token (RFC 7592) for management endpoint
-  regToken <- liftIO generateRegistrationAccessToken
+  regToken <- generateRegistrationAccessToken
   let regUri = "/oauth2/register/" <> unClientId clientId
 
   -- Public clients have no client_secret (RFC 7591 Section 3.3.3)
@@ -129,7 +131,7 @@ handleRegister (ClientRegistrationRequest clientName reqRedirects reqGrants reqR
   pure
     ClientRegistrationResponse
       { client_id = clientId
-      , client_secret = Nothing  -- No secret for public clients
+      , client_secret = Nothing -- No secret for public clients
       , client_id_issued_at = currentTime
       , client_name = clientName
       , redirect_uris = reqRedirects
