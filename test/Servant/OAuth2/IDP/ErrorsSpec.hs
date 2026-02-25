@@ -17,7 +17,7 @@ Test suite for consolidated OAuth error types in Servant.OAuth2.IDP.Errors.
 module Servant.OAuth2.IDP.ErrorsSpec (spec) where
 
 import Control.Monad.Reader (ReaderT)
-import Data.Aeson (decode, encode)
+import Data.Aeson (ToJSON (toJSON), decode, encode, object, (.=))
 import Data.ByteString.Lazy qualified as LBS
 import Data.ByteString.Lazy.Char8 qualified as LBS8
 import Data.List (isInfixOf)
@@ -25,6 +25,7 @@ import Data.Maybe (fromJust, isJust)
 import Data.Text qualified as T
 import Network.HTTP.Types.Status (status400)
 import Servant (ServerError (..))
+import Servant.OAuth2.IDP.DCR.Error qualified as DCRError
 import Servant.OAuth2.IDP.Errors
 import Servant.OAuth2.IDP.Store.InMemory (OAuthStoreError (..), OAuthTVarEnv)
 import Servant.OAuth2.IDP.Types (
@@ -670,3 +671,14 @@ spec = do
                 errBody serverErr `shouldSatisfy` \body ->
                     containsText "Internal Server Error" body
                 errHeaders serverErr `shouldContain` [("Content-Type", "text/plain; charset=utf-8")]
+
+    describe "DCRErrorCode" $ do
+        -- | OAUTH2_CLIENT_ENTITY-FR-010, SC-018: Unauthorized maps to "unauthorized" JSON
+        it "Unauthorized serializes to RFC code" $ do
+            toJSON (DCRError.mkDCRError DCRError.Unauthorized Nothing) `shouldBe`
+                object ["error" .= ("unauthorized" :: T.Text)]
+
+        -- | SC-019: ClientNotFound also maps to "unauthorized" (no enumeration)
+        it "ClientNotFound serializes to unauthorized (no enumeration)" $ do
+            let e = DCRError.mkDCRError DCRError.ClientNotFound Nothing
+            toJSON e `shouldBe` object ["error" .= ("unauthorized" :: T.Text)]

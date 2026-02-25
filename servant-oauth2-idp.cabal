@@ -40,6 +40,7 @@ library
         Servant.OAuth2.IDP.API
         Servant.OAuth2.IDP.Config
         Servant.OAuth2.IDP.DCR.Error
+        Servant.OAuth2.IDP.DCR.RegistrationAccessToken
         Servant.OAuth2.IDP.Errors
         Servant.OAuth2.IDP.Handlers
         Servant.OAuth2.IDP.Handlers.Authorization
@@ -90,7 +91,8 @@ library
         hspec-wai >= 0.11 && < 0.12,
         QuickCheck >= 2.14 && < 2.16,
         jose >= 0.10 && < 0.12,
-        hashable >= 1.4 && < 1.6
+        hashable >= 1.4 && < 1.6,
+        bcrypt >= 0.0 && < 0.1
 
     hs-source-dirs:   src
     default-language: GHC2021
@@ -125,6 +127,7 @@ test-suite servant-oauth2-idp-test
         Servant.OAuth2.IDP.TypesSpec
         Servant.OAuth2.IDP.CryptoEntropySpec
         Servant.OAuth2.IDP.ErrorsSpec
+        Servant.OAuth2.IDP.DCR.RegistrationAccessTokenSpec
         Servant.OAuth2.IDP.Handlers.MetadataSpec
         Servant.OAuth2.IDP.MetadataSpec
         Servant.OAuth2.IDP.PKCESpec
