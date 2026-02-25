@@ -25,6 +25,8 @@ module Servant.OAuth2.IDP.DCR.RegistrationAccessToken
   , mkRegistrationAccessToken
   , generateRegistrationAccessToken
   , unRegistrationAccessToken
+  , mkHashedRegistrationAccessToken
+  , unHashedRegistrationAccessToken
     -- * Predicates
   , isRegistrationAccessToken
     -- * Hashing
@@ -37,11 +39,12 @@ import Crypto.Random (getRandomBytes)
 import Data.Aeson (FromJSON (..), ToJSON (..), withText)
 import Data.ByteArray.Encoding (Base (Base16), convertToBase)
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
 import GHC.Generics (Generic)
-import Test.QuickCheck (Arbitrary (..), elements, oneof)
+import Test.QuickCheck (Arbitrary (..), elements, oneof, vectorOf)
 
 -- | An opaque registration access token, always prefixed with @dcr_@.
 --
@@ -88,6 +91,24 @@ unRegistrationAccessToken (RegistrationAccessToken t) = t
 isRegistrationAccessToken :: Text -> Bool
 isRegistrationAccessToken = T.isPrefixOf "dcr_"
 
+-- | Smart constructor for 'HashedRegistrationAccessToken' from raw 'ByteString'.
+--
+-- Only accepts valid bcrypt hashes (starting with @$2a$@, @$2b$@, or @$2y$@).
+-- Use 'hashRegistrationAccessToken' to create from a plaintext token;
+-- use this only to reconstruct an existing stored hash.
+mkHashedRegistrationAccessToken :: ByteString -> Maybe HashedRegistrationAccessToken
+mkHashedRegistrationAccessToken bs
+  | any (`BS.isPrefixOf` bs) prefixes = Just (HashedRegistrationAccessToken bs)
+  | otherwise = Nothing
+  where
+    prefixes = map (TE.encodeUtf8 . T.pack) ["$2a$", "$2b$", "$2y$"]
+
+-- | Unwrap the underlying 'ByteString' from a 'HashedRegistrationAccessToken'.
+--
+-- Use with care — this exposes the raw bcrypt hash for storage purposes only.
+unHashedRegistrationAccessToken :: HashedRegistrationAccessToken -> ByteString
+unHashedRegistrationAccessToken (HashedRegistrationAccessToken bs) = bs
+
 -- | Generate a cryptographically secure 'RegistrationAccessToken'.
 --
 -- Produces @dcr_@ followed by 64 lowercase hex characters (32 random bytes,
@@ -129,6 +150,24 @@ instance FromJSON RegistrationAccessToken where
       Nothing -> fail "RegistrationAccessToken must start with 'dcr_'"
       Just rat -> pure rat
 
+-- | JSON serialisation for 'HashedRegistrationAccessToken'.
+--
+-- Serialises the bcrypt hash bytes as a UTF-8 text string.
+-- bcrypt output is always ASCII-safe, so UTF-8 encoding is lossless.
+-- IMPORTANT: This exposes the bcrypt hash — only use for server-side persistence,
+-- never in API responses to clients.
+instance ToJSON HashedRegistrationAccessToken where
+  toJSON (HashedRegistrationAccessToken bs) = toJSON (TE.decodeUtf8 bs)
+
+-- | JSON deserialisation for 'HashedRegistrationAccessToken'.
+--
+-- Validates the bcrypt prefix (@$2a$@, @$2b$@, or @$2y$@) on deserialisation.
+instance FromJSON HashedRegistrationAccessToken where
+  parseJSON = withText "HashedRegistrationAccessToken" $ \t ->
+    case mkHashedRegistrationAccessToken (TE.encodeUtf8 t) of
+      Nothing -> fail "HashedRegistrationAccessToken must be a valid bcrypt hash"
+      Just hrat -> pure hrat
+
 -- | 'Arbitrary' instance for property testing.
 --
 -- Generates @dcr_@ followed by a non-empty sequence of hex characters.
@@ -139,3 +178,19 @@ instance Arbitrary RegistrationAccessToken where
     where
       listOf1 gen = (:) <$> gen <*> listOf gen
       listOf gen = oneof [pure [], (:) <$> gen <*> listOf gen]
+
+-- | 'Arbitrary' instance for 'HashedRegistrationAccessToken' for property testing.
+--
+-- Generates a synthetic bcrypt-format hash (valid prefix, random alphanumeric content).
+-- These are NOT real bcrypt hashes — they are test values that pass format validation.
+instance Arbitrary HashedRegistrationAccessToken where
+  arbitrary = do
+    let bcryptBase64Chars = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    costFactor <- elements ["04", "05", "06", "07", "08", "09", "10", "11", "12"]
+    saltChars <- vectorOf 22 (elements bcryptBase64Chars)
+    hashChars <- vectorOf 31 (elements bcryptBase64Chars)
+    let hashText = T.pack ("$2a$" <> costFactor <> "$" <> saltChars <> hashChars)
+        hashBS = TE.encodeUtf8 hashText
+    -- mkHashedRegistrationAccessToken always succeeds here since we generate valid prefix
+    pure (HashedRegistrationAccessToken hashBS)
+  shrink _ = []
