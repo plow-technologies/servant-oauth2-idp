@@ -45,7 +45,7 @@ import Data.ByteArray.Encoding (Base (Base64URLUnpadded), convertToBase)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as LBS
 import Data.Functor ((<&>))
-import Data.Text.Encoding (decodeUtf8)
+import Data.Text.Encoding (decodeUtf8')
 import Lens.Micro ((?~), (^.))
 import Servant.OAuth2.IDP.Types (AccessToken (..))
 
@@ -98,8 +98,8 @@ signAccessToken signingKey payload = do
   -- Build JWS header with RFC 9068 typ and RFC 7638 kid (both protected)
   hdr <-
     makeJWSHeader signingKey
-      <&> (typ ?~ HeaderParam getProtected "at+jwt")  -- RFC 9068: Access Token JWT
       <&> (kid ?~ HeaderParam getProtected kidText)   -- RFC 7638: Thumbprint-based kid
+        . (typ ?~ HeaderParam getProtected "at+jwt")  -- RFC 9068: Access Token JWT
 
   -- Sign the JWT using jose library
   signed <- signJWT signingKey hdr payload
@@ -111,9 +111,13 @@ signAccessToken signingKey payload = do
     kidText =
       let digest = signingKey ^. thumbprint :: Digest SHA256
           kidBytes = convertToBase Base64URLUnpadded (convert digest :: ByteString) :: ByteString
-       in decodeUtf8 kidBytes
+       in case decodeUtf8' kidBytes of
+            Left _ -> error "signAccessToken: base64url thumbprint produced invalid UTF-8 (impossible)"
+            Right t -> t
 
     -- Convert SignedJWT to AccessToken via compact serialization
     signedJWTToAccessToken :: SignedJWT -> AccessToken
     signedJWTToAccessToken jwt =
-      AccessToken $ decodeUtf8 $ LBS.toStrict $ encodeCompact jwt
+      case decodeUtf8' (LBS.toStrict (encodeCompact jwt)) of
+        Left _ -> error "signAccessToken: compact-serialized JWT produced invalid UTF-8 (impossible)"
+        Right t -> AccessToken t

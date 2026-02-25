@@ -67,6 +67,12 @@ module Servant.OAuth2.IDP.Types
     pattern ConfidentialClientSecret,
     mkClientSecret,
     unClientSecret,
+    HashedClientSecret,
+    mkHashedClientSecret,
+    unHashedClientSecret,
+    generateClientSecret,
+    hashClientSecret,
+    verifyClientSecret,
     ClientName,
     mkClientName,
     unClientName,
@@ -101,6 +107,8 @@ module Servant.OAuth2.IDP.Types
   ) where
 
 import Control.Monad (forM_, guard, when)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Crypto.BCrypt qualified as BCrypt
 import Crypto.Random (MonadRandom (getRandomBytes))
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, withText, (.:), (.:?), (.=))
 import Data.Aeson.Types (Parser, withScientific)
@@ -113,6 +121,7 @@ import Data.List.NonEmpty qualified as NE
 import Data.Maybe (fromJust, isNothing)
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Data.String (IsString (..))
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -275,18 +284,18 @@ generateAuthCodeId prefix = do
     Just codeId -> return codeId
     Nothing -> error "generateAuthCodeId: crypto random generation produced empty text (impossible)"
 
--- | Generate a cryptographically secure ClientId with prefix
+-- | Generate a cryptographically secure ClientId with prefix.
 -- Uses 32 bytes (256 bits) of cryptographic randomness, base16-encoded.
-generateClientId :: Text -> IO ClientId
+-- Polymorphic over any 'MonadRandom' instance (e.g. @IO@, @ChaChaDRG@, @TestM@).
+generateClientId :: (MonadRandom m) => Text -> m ClientId
 generateClientId prefix = do
-  randomBytes <- getRandomBytes 32 :: IO ByteString
-  randomHex <- case TE.decodeUtf8' $ convertToBase Base16 randomBytes of
-    Right t -> return t
-    Left err -> error $ "generateClientId: Base16 encoding produced invalid UTF-8 (impossible): " ++ show err
-  let idText = prefix <> randomHex
-  case mkClientId idText of
-    Just clientId -> return clientId
-    Nothing -> error "generateClientId: crypto random generation produced empty text (impossible)"
+  randomBytes <- getRandomBytes 32 :: (MonadRandom m) => m ByteString
+  case TE.decodeUtf8' (convertToBase Base16 randomBytes :: ByteString) of
+    Left _ -> error "generateClientId: base16 encoding produced invalid UTF-8 (impossible)"
+    Right hex ->
+      let idText = prefix <> hex
+      -- hex is non-empty (32 bytes → 64 hex chars), so mkClientId always succeeds here
+      in pure (ClientId idText)
 
 -- | Generate a cryptographically secure SessionId (UUID format)
 -- Uses 16 bytes (128 bits) of cryptographic randomness, formatted as UUID v4.
@@ -742,11 +751,119 @@ pattern ConfidentialClientSecret s <- ClientSecret s
 mkClientSecret :: Text -> Maybe ClientSecret
 mkClientSecret t = Just (ClientSecret t)
 
+-- | 'IsString' instance for 'ClientSecret'.
+--
+-- Allows string literals to be used as 'ClientSecret' values when
+-- @OverloadedStrings@ is enabled.  Useful in tests and configuration:
+--
+-- @
+-- let secret = "my-secret" :: ClientSecret
+-- @
+instance IsString ClientSecret where
+  fromString = ClientSecret . T.pack
+
 instance FromHttpApiData ClientSecret where
   parseUrlPiece = Right . ClientSecret
 
 instance ToHttpApiData ClientSecret where
   toUrlPiece = unClientSecret
+
+-- | Bcrypt hash of a client secret, suitable for server-side storage.
+--
+-- Created via 'hashClientSecret' or reconstructed from storage via 'mkHashedClientSecret'.
+-- The 'Show' instance is redacting — it never leaks the hash value.
+-- Never store the plaintext secret server-side; store only the hash.
+newtype HashedClientSecret = HashedClientSecret Text
+  deriving stock (Generic)
+  deriving (Eq, Ord)
+
+-- | Redacting 'Show' instance — never leaks the hash value.
+instance Show HashedClientSecret where
+  show _ = "HashedClientSecret <redacted>"
+
+-- | Smart constructor for 'HashedClientSecret' from a bcrypt hash text.
+--
+-- Only accepts valid bcrypt hashes (starting with @$2a$@, @$2b$@, or @$2y$@).
+-- Use 'hashClientSecret' to create from a plaintext secret;
+-- use this only to reconstruct an existing stored hash.
+mkHashedClientSecret :: Text -> Maybe HashedClientSecret
+mkHashedClientSecret t
+  | any (`T.isPrefixOf` t) ["$2a$", "$2b$", "$2y$"] = Just (HashedClientSecret t)
+  | otherwise = Nothing
+
+-- | Unwrap the underlying 'Text' from a 'HashedClientSecret'.
+--
+-- Use with care — this exposes the raw bcrypt hash for storage purposes only.
+unHashedClientSecret :: HashedClientSecret -> Text
+unHashedClientSecret (HashedClientSecret t) = t
+
+instance ToJSON HashedClientSecret where
+  toJSON (HashedClientSecret t) = toJSON t
+
+instance FromJSON HashedClientSecret where
+  parseJSON = withText "HashedClientSecret" $ \t ->
+    case mkHashedClientSecret t of
+      Nothing -> fail "HashedClientSecret must be a valid bcrypt hash"
+      Just h -> pure h
+
+-- | Generate a cryptographically secure client secret.
+--
+-- Produces 32 random bytes encoded as unpadded URL-safe Base64 (giving 43
+-- characters of entropy).
+--
+-- Polymorphic over any 'MonadRandom' — works in @IO@ and any
+-- ReaderT/StateT stack that threads the constraint.
+--
+-- Caller pattern:
+--
+-- @
+-- secret <- generateClientSecret
+-- hashed <- hashClientSecret secret
+-- storeHashed hashed
+-- returnToClient secret
+-- @
+generateClientSecret :: (MonadRandom m) => m ClientSecret
+generateClientSecret = do
+  randomBytes <- getRandomBytes 32 :: (MonadRandom m) => m ByteString
+  case TE.decodeUtf8' (convertToBase Base64URLUnpadded randomBytes :: ByteString) of
+    Left err -> error $ "generateClientSecret: base64url encoding produced invalid UTF-8 (impossible): " <> show err
+    Right secretText -> pure (ClientSecret secretText)
+
+-- | Hash a 'ClientSecret' using bcrypt for secure server-side storage.
+--
+-- Returns 'Nothing' if bcrypt hashing fails (extremely unlikely in practice).
+-- Always store the hash, never the plaintext secret.
+--
+-- Polymorphic over any 'MonadIO' constraint.
+hashClientSecret :: (MonadIO m) => ClientSecret -> m (Maybe HashedClientSecret)
+hashClientSecret (ClientSecret secretText) = liftIO $ do
+  mHashed <- BCrypt.hashPasswordUsingPolicy BCrypt.slowerBcryptHashingPolicy (TE.encodeUtf8 secretText)
+  pure $ case mHashed of
+    Nothing -> Nothing
+    Just h -> case TE.decodeUtf8' h of
+      Left _ -> Nothing
+      Right t -> Just (HashedClientSecret t)
+
+-- | Verify a plaintext 'ClientSecret' against a stored bcrypt hash.
+--
+-- Uses constant-time comparison internally (via bcrypt).
+verifyClientSecret :: ClientSecret -> HashedClientSecret -> Bool
+verifyClientSecret (ClientSecret secretText) (HashedClientSecret hashText) =
+  BCrypt.validatePassword (TE.encodeUtf8 hashText) (TE.encodeUtf8 secretText)
+
+-- | 'Arbitrary' instance for 'HashedClientSecret' for property testing.
+--
+-- Generates a synthetic bcrypt-format hash (valid prefix, random alphanumeric content).
+-- These are NOT real bcrypt hashes — they are test values that pass format validation.
+instance Arbitrary HashedClientSecret where
+  arbitrary = do
+    let bcryptBase64Chars = "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    costFactor <- elements ["04", "05", "06", "07", "08", "09", "10", "11", "12"]
+    saltChars <- vectorOf 22 (elements bcryptBase64Chars)
+    hashChars <- vectorOf 31 (elements bcryptBase64Chars)
+    let hashText = T.pack ("$2a$" <> costFactor <> "$" <> saltChars <> hashChars)
+    pure (HashedClientSecret hashText)
+  shrink _ = []
 
 -- | OAuth client name (FR-062)
 newtype ClientName = ClientName {unClientName :: Text}
