@@ -45,6 +45,7 @@ import Test.QuickCheck.Instances.Text ()  -- Provides Arbitrary Text
 
 import Servant.OAuth2.IDP.API qualified as API
 import Servant.OAuth2.IDP.DCR.Error (DCRError, DCRErrorCode)
+import Servant.OAuth2.IDP.DCR.RegistrationAccessToken (RegistrationAccessToken)
 import Servant.OAuth2.IDP.Types
   ( ClientAuthMethod (..),
     ClientSecret,
@@ -98,6 +99,8 @@ instance Arbitrary API.ClientRegistrationResponse where
     -- Generate a reasonable Unix timestamp (2024-01-01 onwards)
     posixTime <- (fromIntegral :: Int -> POSIXTime) <$> arbitrary
     let client_id_issued_at = 1704067200.0 + fromIntegral (abs (floor posixTime :: Integer) `mod` 31536000)
+    registration_access_token <- arbitrary :: Gen RegistrationAccessToken
+    let registration_client_uri = "/oauth2/register/test-client-id"
     pure $ API.ClientRegistrationResponse {..}
 
 -- | Golden tests for RFC 7591 ClientRegistration types

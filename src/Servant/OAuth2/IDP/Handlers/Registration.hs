@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- |
@@ -32,6 +33,9 @@ import Servant.OAuth2.IDP.API
     ClientRegistrationResponse (..),
   )
 import Servant.OAuth2.IDP.Config (OAuthEnv (..))
+import Servant.OAuth2.IDP.DCR.RegistrationAccessToken
+  ( generateRegistrationAccessToken
+  )
 import Servant.OAuth2.IDP.Errors
   ( ValidationError (..),
   )
@@ -115,6 +119,10 @@ handleRegister (ClientRegistrationRequest clientName reqRedirects reqGrants reqR
   -- Emit trace (use first redirect URI from NonEmpty list)
   liftIO $ traceWith tracer $ TraceClientRegistration clientId (NE.head redirectsNE)
 
+  -- Generate registration access token (RFC 7592) for management endpoint
+  regToken <- liftIO generateRegistrationAccessToken
+  let regUri = "/oauth2/register/" <> unClientId clientId
+
   -- Public clients have no client_secret (RFC 7591 Section 3.3.3)
   -- The field is omitted from JSON response when Nothing
 
@@ -128,4 +136,6 @@ handleRegister (ClientRegistrationRequest clientName reqRedirects reqGrants reqR
       , grant_types = reqGrants
       , response_types = reqResponses
       , token_endpoint_auth_method = reqAuth
+      , registration_access_token = regToken
+      , registration_client_uri = regUri
       }

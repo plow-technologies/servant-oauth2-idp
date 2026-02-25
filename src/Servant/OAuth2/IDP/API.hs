@@ -104,6 +104,7 @@ import Servant.OAuth2.IDP.Types
     mkSessionId,
     mkTokenValidity,
   )
+import Servant.OAuth2.IDP.DCR.RegistrationAccessToken (RegistrationAccessToken)
 import Web.HttpApiData (parseUrlPiece)
 
 -- -----------------------------------------------------------------------------
@@ -289,13 +290,15 @@ data ClientRegistrationResponse = ClientRegistrationResponse
   , grant_types :: NonEmpty GrantType
   , response_types :: NonEmpty ResponseType
   , token_endpoint_auth_method :: ClientAuthMethod
+  , registration_access_token :: RegistrationAccessToken -- RFC 7592 management token
+  , registration_client_uri :: Text -- RFC 7592 management endpoint URI
   }
   deriving (Eq, Show, Generic)
 
 instance Aeson.FromJSON ClientRegistrationResponse
 
 instance Aeson.ToJSON ClientRegistrationResponse where
-  toJSON (ClientRegistrationResponse clientId clientSecret clientIdIssuedAt clientNm redirectUris grantTypes responseTypes authMethod) =
+  toJSON (ClientRegistrationResponse clientId clientSecret clientIdIssuedAt clientNm redirectUris grantTypes responseTypes authMethod regToken regUri) =
     object $ catMaybes
       [ Just ("client_id" .= clientId)
       , ("client_secret" .=) <$> clientSecret  -- Only include if Just
@@ -305,6 +308,8 @@ instance Aeson.ToJSON ClientRegistrationResponse where
       , Just ("grant_types" .= grantTypes)
       , Just ("response_types" .= responseTypes)
       , Just ("token_endpoint_auth_method" .= authMethod)
+      , Just ("registration_access_token" .= regToken)
+      , Just ("registration_client_uri" .= regUri)
       ]
 
 -- | Token endpoint response.

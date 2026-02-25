@@ -23,6 +23,7 @@ import Data.Maybe (fromJust, isJust, isNothing)
 import Data.Set qualified as Set
 import Data.Time.Clock.POSIX (POSIXTime)
 import Servant.OAuth2.IDP.API (ClientRegistrationRequest (..), ClientRegistrationResponse (..), TokenResponse (..))
+import Servant.OAuth2.IDP.DCR.RegistrationAccessToken (mkRegistrationAccessToken)
 import Servant.OAuth2.IDP.Types
   ( AccessToken (..),
     ClientAuthMethod (..),
@@ -50,6 +51,7 @@ spec = do
             clientName = fromJust $ mkClientName "Test Client"
             redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
             testTime = 1000000.0 :: POSIXTime
+            testRegToken = fromJust $ mkRegistrationAccessToken "dcr_test000000000000000000000000000000000000000000000000000000000000"
             response :: ClientRegistrationResponse =
               ClientRegistrationResponse
                 { client_id = clientId
@@ -60,6 +62,8 @@ spec = do
                 , grant_types = GrantAuthorizationCode :| []
                 , response_types = ResponseCode :| []
                 , token_endpoint_auth_method = AuthNone
+                , registration_access_token = testRegToken
+                , registration_client_uri = "/oauth2/register/test-client-id"
                 }
             encoded = encode response
             decoded = decode encoded :: Maybe Value
@@ -77,6 +81,7 @@ spec = do
             clientName = fromJust $ mkClientName "Public Client"
             redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
             testTime = 1000000.0 :: POSIXTime
+            testRegToken = fromJust $ mkRegistrationAccessToken "dcr_test000000000000000000000000000000000000000000000000000000000000"
             response :: ClientRegistrationResponse =
               ClientRegistrationResponse
                 { client_id = clientId
@@ -87,6 +92,8 @@ spec = do
                 , grant_types = GrantAuthorizationCode :| []
                 , response_types = ResponseCode :| []
                 , token_endpoint_auth_method = AuthNone
+                , registration_access_token = testRegToken
+                , registration_client_uri = "/oauth2/register/test-client-id"
                 }
             encoded = encode response
             decoded = decode encoded :: Maybe Value
@@ -102,6 +109,7 @@ spec = do
             clientName = fromJust $ mkClientName "My Application"
             redirectUri = fromJust $ mkRedirectUri "https://app.example.com/auth"
             testTime = 1000000.0 :: POSIXTime
+            testRegToken = fromJust $ mkRegistrationAccessToken "dcr_test000000000000000000000000000000000000000000000000000000000000"
             response :: ClientRegistrationResponse =
               ClientRegistrationResponse
                 { client_id = clientId
@@ -112,6 +120,8 @@ spec = do
                 , grant_types = GrantAuthorizationCode :| []
                 , response_types = ResponseCode :| []
                 , token_endpoint_auth_method = AuthNone
+                , registration_access_token = testRegToken
+                , registration_client_uri = "/oauth2/register/test-client-id"
                 }
             encoded = encode response
             decoded = decode encoded :: Maybe Value
@@ -127,6 +137,7 @@ spec = do
             clientName = fromJust $ mkClientName "Public Client"
             redirectUri = fromJust $ mkRedirectUri "https://example.com/callback"
             testTime = 1000000.0 :: POSIXTime
+            testRegToken = fromJust $ mkRegistrationAccessToken "dcr_test000000000000000000000000000000000000000000000000000000000000"
             response =
               ClientRegistrationResponse
                 { client_id = clientId
@@ -137,6 +148,8 @@ spec = do
                 , grant_types = GrantAuthorizationCode :| []
                 , response_types = ResponseCode :| []
                 , token_endpoint_auth_method = AuthNone
+                , registration_access_token = testRegToken
+                , registration_client_uri = "/oauth2/register/test-client-id"
                 }
             encoded = encode response
             decoded = decode encoded :: Maybe Value
@@ -152,6 +165,7 @@ spec = do
             clientName = fromJust $ mkClientName "My Application"
             redirectUri = fromJust $ mkRedirectUri "https://app.example.com/auth"
             testTime = 1000000.0 :: POSIXTime
+            testRegToken = fromJust $ mkRegistrationAccessToken "dcr_test000000000000000000000000000000000000000000000000000000000000"
             response =
               ClientRegistrationResponse
                 { client_id = clientId
@@ -162,6 +176,8 @@ spec = do
                 , grant_types = GrantAuthorizationCode :| []
                 , response_types = ResponseCode :| []
                 , token_endpoint_auth_method = AuthNone
+                , registration_access_token = testRegToken
+                , registration_client_uri = "/oauth2/register/test-client-id"
                 }
             encoded = encode response
             decoded = decode encoded :: Maybe Value
