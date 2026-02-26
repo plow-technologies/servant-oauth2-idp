@@ -677,8 +677,3 @@ spec = do
         it "Unauthorized serializes to RFC code" $ do
             toJSON (DCRError.mkDCRError DCRError.Unauthorized Nothing) `shouldBe`
                 object ["error" .= ("unauthorized" :: T.Text)]
-
-        -- | SC-019: ClientNotFound also maps to "unauthorized" (no enumeration)
-        it "ClientNotFound serializes to unauthorized (no enumeration)" $ do
-            let e = DCRError.mkDCRError DCRError.ClientNotFound Nothing
-            toJSON e `shouldBe` object ["error" .= ("unauthorized" :: T.Text)]

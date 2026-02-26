@@ -43,10 +43,8 @@ data DCRErrorCode
     AccessDenied
   | -- | Server-side internal error (e.g., database write failure)
     ServerError
-  | -- | Invalid or missing registration_access_token (HTTP 401)
+  | -- | Invalid or missing registration_access_token or unknown client_id (HTTP 401)
     Unauthorized
-  | -- | Unknown client_id — intentionally 401, not 404 (prevents enumeration)
-    ClientNotFound
   deriving stock (Eq, Show, Generic, Ord, Enum, Bounded)
 
 -- | JSON instances (RFC 7591 wire format):
@@ -57,9 +55,7 @@ instance ToJSON DCRErrorCode where
   toJSON InvalidClientMetadata = toJSON ("invalid_client_metadata" :: Text)
   toJSON AccessDenied = toJSON ("access_denied" :: Text)
   toJSON ServerError = toJSON ("server_error" :: Text)
-  -- Both map to "unauthorized" per RFC — no enumeration leak
   toJSON Unauthorized = toJSON ("unauthorized" :: Text)
-  toJSON ClientNotFound = toJSON ("unauthorized" :: Text)
 
 instance FromJSON DCRErrorCode where
   parseJSON = withText "DCRErrorCode" $ \case
@@ -67,7 +63,6 @@ instance FromJSON DCRErrorCode where
     "invalid_client_metadata" -> pure InvalidClientMetadata
     "access_denied" -> pure AccessDenied
     "server_error" -> pure ServerError
-    -- NOTE: "unauthorized" parses as Unauthorized (ClientNotFound only produced server-side)
     "unauthorized" -> pure Unauthorized
     other -> parseFail $ "Unknown DCRErrorCode: " <> T.unpack other
 
